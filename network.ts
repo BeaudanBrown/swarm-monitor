@@ -6,7 +6,8 @@ import { Message } from './message';
 import { NodeStats, PeerStats } from './stats'
 
 // Seed node endpoint
-const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
+// const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
+const SEED_NODE_URL = 'http://imaginary.stream:38157/json_rpc';
 const CONCURRENT_REQUESTS = 1000;
 
 export class Network {
@@ -95,10 +96,10 @@ export class Network {
     }
   }
 
-  async getAllNodes() {
-    if (this.allNodes.length === 0) {
-      await this._updateAllNodes();
-    }
+  getAllNodes() {
+    // if (this.allNodes.length === 0) {
+    //   await this._updateAllNodes();
+    // }
     return this.allNodes;
   }
 

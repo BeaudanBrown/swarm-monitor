@@ -1,5 +1,6 @@
 import { Account } from './account';
 import { Network } from './network';
+import { Snode } from './snode';
 import { NodeStats, PeerStats, NodePerformance, printLifetimeStats, printDiff } from './stats'
 import { sleep } from './utils';
 import chalk from 'chalk'
@@ -8,7 +9,7 @@ const COMMANDS = {
   update: 'update_stats',
   accStats: 'acc_stats',
   snodeStats: 'snode_stats',
-  addAccs: 'add_accounts',
+  addAccs: 'add_accs',
   send: 'send',
 };
 const START_MODES = {
@@ -149,12 +150,26 @@ const commandMode = () => {
         break;
 
       case COMMANDS.accStats:
+        if (accounts.length === 0) {
+          console.log('No accounts to show stats for!');
+          break;
+        }
         console.log('Printing account stats...');
+        const nodeAccounts: {[snodeKey: string]: { accs: Account[], shouldHave: number }} = {};
+        const relevantNodes = new Set<Snode>();
         await Promise.all(accounts.map(async a => {
           const swarm = await a.getSwarm();
           await a.updateStats(swarm);
-          await a.printStats(swarm);
+          swarm.forEach(snode => {
+            relevantNodes.add(snode);
+            if (!nodeAccounts[snode.pubkey]) {
+              nodeAccounts[snode.pubkey] = { accs: [], shouldHave: 0 };
+            }
+            nodeAccounts[snode.pubkey].accs.push(a);
+            nodeAccounts[snode.pubkey].shouldHave += a.messages.size;
+          })
         }));
+        relevantNodes.forEach(snode => snode.printStats(nodeAccounts[snode.pubkey].accs, nodeAccounts[snode.pubkey].shouldHave))
         console.log('Printing complete');
         break;
 

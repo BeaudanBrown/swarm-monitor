@@ -11,6 +11,7 @@ const MIN_MSG_SIZE = 20;
 const MAX_MSG_SIZE = 3000;
 const MIN_MSG_INTERVAL = 1;
 const MAX_MSG_INTERVAL = 500;
+const SUBSWARM_SIZE = 2;
 
 const randomIntFromInterval = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1) + min);
@@ -52,7 +53,7 @@ export class Account {
   }
 
   async sendMessages(swarm: Array<Snode>, num = 1) {
-    const subSwarm: Array<Snode> = getRandom(swarm, 3);
+    const subSwarm: Array<Snode> = getRandom(swarm, SUBSWARM_SIZE);
     for (let i = 0; i < num; i += 1) {
       const message = new Message(this.pubKey);
       const success = await firstTrue(subSwarm.map(snode => snode.sendMessage(message)));
@@ -68,8 +69,7 @@ export class Account {
   async updateStats(swarm: Array<Snode>) {
     await Promise.all(swarm.map(async snode => {
       try {
-        const messages = await snode.retrieveAllMessages(this.pubKey);
-        snode.messagesHolding = messages.length;
+        await snode.retrieveAllMessages(this.pubKey);
       } catch (e) {
         console.log(e);
       }
@@ -80,12 +80,12 @@ export class Account {
     let inconsistent = false;
     const shouldHave = this.messages.size;
     swarm.forEach(snode => {
-      if (snode.messagesHolding !== shouldHave) {
+      if (snode.messagesHolding[this.pubKey] !== shouldHave) {
         if (!inconsistent) {
           inconsistent = true;
           console.log(`Inconsistent messages for account ${this.pubKey}`);
         }
-        console.log(`Snode ${snode.ip}:${snode.port} should have ${shouldHave} but has ${snode.messagesHolding}`);
+        console.log(`Snode ${snode.ip}:${snode.port} should have ${shouldHave} but has ${snode.messagesHolding[this.pubKey]}`);
       }
     });
     if (!inconsistent) {
