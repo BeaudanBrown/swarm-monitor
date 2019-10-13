@@ -1,6 +1,6 @@
 import { Account } from './account';
 import { Network } from './network';
-import { NodeStats, PeerStats, NodePerformance, printLifetimeStats, printDiff } from './stats'
+import { NodeStats, PeerStats, NodePerformance, printLifetimeStats } from './stats'
 import { sleep } from './utils';
 import chalk from 'chalk'
 
@@ -69,29 +69,19 @@ const getSnodeStats = async () => {
   console.log(`Storage not reachable: ${na_count}/${res2.length}`);
   console.log(`Storage error on post: ${error_count}/${res2.length}`);
 
-  ["1.0.4", "1.0.5"].forEach(tag => {
+  ["1.0.4", "1.0.5", "1.0.6"].forEach(tag => {
 
     const count = results.reduce((acc,x) => acc += (x.version === tag ? 1 : 0), 0);
     const ratio = Math.round(100 * count / nodes.length);
     console.log(`Version ${tag}: ${count}/${results.length} (${ratio}%)`);
 
     const na = results.reduce((acc,x) => acc += ((x.version === tag && status_map[x.pubkey] === "N/A") ? 1 : 0), 0);
-    const nopost = results.reduce((acc,x) => acc += ((x.version === "1.0.4" && status_map[x.pubkey] === "no post") ? 1 : 0), 0);
+    const nopost = results.reduce((acc,x) => acc += ((x.version === tag && status_map[x.pubkey] === "no post") ? 1 : 0), 0);
 
     console.log(`   N/A for ${tag}: ${na}/${count}`);
     console.log(`   Error on post for ${tag}: ${nopost}/${count}`);
 
   });
-
-  printLifetimeStats(results, status_map);
-
-  /// save to a map
-  let prev_results = new Map<string, NodeStats>();
-
-  results.forEach(x => {
-    prev_results.set(x.pubkey, x);
-  });
-  // Gather stats from other nodes
 
   let own_perf: Map<string, NodePerformance> = new Map();
 
@@ -101,66 +91,42 @@ const getSnodeStats = async () => {
     for (let [key, value] of res.peer_stats) {
 
       if (!own_perf.has(key)) {
-        own_perf.set(key, new NodePerformance(0));
+        own_perf.set(key, new NodePerformance(0, 0, 0));
       }
 
       let prev = own_perf.get(key);
 
       prev.req_failed += value.requests_failed;
+      prev.bc_test_failed += value.bc_test_failed;
+      prev.store_test_failed += value.store_test_failed;
 
       own_perf.set(key, prev);
     }
 
   }
 
-  console.log("Pubkey".padStart(16) + "  " + "Failed requests".padStart(15))
+  
+  printLifetimeStats(results, status_map, own_perf);
+  // console.log(own_perf);
 
-  for (let [key, value] of own_perf) {
+  // console.log("Pubkey".padStart(16) + "  " + "Failed requests".padStart(15))
 
-    let line = key.substr(0, 16) + "  ";
-    line += value.req_failed.toLocaleString().padStart(15);
+  // for (let [key, value] of own_perf) {
 
-    if (!prev_results.has(key)) {
-      continue;
-    }
+  //   let line = key.substr(0, 16) + "  ";
+  //   line += value.req_failed.toLocaleString().padStart(15);
+  //   line += value.bc_test_failed.toLocaleString().padStart(15);
 
-    if (value.req_failed !== 0) {
-      console.log(chalk.red(line));
-    } else {
-      console.log(chalk.white(line));
-    }
-  }
+  //   // if (!prev_results.has(key)) {
+  //   //   continue;
+  //   // }
 
-  return;
-  // all nodes
-
-  let swarm_ids2: Map<string, number> = new Map();
-  nodes.forEach(sn => {
-
-    if (!swarm_ids2.has(sn.swarm_id)) {
-      swarm_ids2.set(sn.swarm_id, 0);
-    }
-
-    let val = swarm_ids2.get(sn.swarm_id);
-    val += 1;
-    swarm_ids2.set(sn.swarm_id, val);
-  });
-
-  console.log(swarm_ids2);
-
-
-  await sleep(10000);
-  let results_2 = await Promise.all(nodes.map(async a => await network.getStats(a)));
-
-  let cur_results = new Map<string, NodeStats>();
-
-  results_2.forEach(x => {
-    cur_results.set(x.pubkey, x);
-  });
-
-  console.log("Difference:");
-
-  printDiff(prev_results, cur_results);
+  //   if (value.req_failed !== 0) {
+  //     console.log(chalk.red(line));
+  //   } else {
+  //     console.log(chalk.white(line));
+  //   }
+  // }
 }
 
 const commandMode = () => {

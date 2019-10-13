@@ -23,25 +23,37 @@ export class PeerStats {
     pubkey: string;
     pushes_failed: number;
     requests_failed: number;
+    bc_test_failed: number;
+    store_test_failed: number;
 
-    constructor(pubkey: string, pushes_failed: number, req_failed: number) {
+    constructor(pubkey: string, pushes_failed: number,
+                req_failed: number, bc_test_failed: number,
+                store_test_failed: number) {
         this.pubkey = pubkey;
         this.pushes_failed = pushes_failed;
         this.requests_failed = req_failed;
+        this.bc_test_failed = bc_test_failed;
+        this.store_test_failed = store_test_failed;
     }
 }
 
 // For a given node how many test we failed based
 // on reports from other nodes
 export class NodePerformance {
-    req_failed: number
+    req_failed: number;
+    bc_test_failed: number;
+    store_test_failed: number;
 
-    constructor(req_failed: number) {
-        this.req_failed = req_failed
+    constructor(req_failed: number, bc_test_failed: number, store_test_failed: number) {
+        this.req_failed = req_failed;
+        this.bc_test_failed = bc_test_failed;
+        this.store_test_failed = store_test_failed
     }
 }
 
-export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:string}) => {
+export const printLifetimeStats = (results: NodeStats[],
+                                   status: {[key:string]:string},
+                                   test_reports: Map<string, NodePerformance>) => {
 
 
     const show_ut_proof = false;
@@ -72,6 +84,11 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
     if (show_height) {
         header += "Height".padStart(8) + margin;
     }
+
+    header += "Req failed".padStart(12) + margin;
+
+    header += "BC failed".padStart(10) + margin;
+    header += "Strg failed".padStart(12) + margin;
 
     header += "Status".padStart(10) + margin;
     header += "Version".padStart(8) + margin;
@@ -143,6 +160,23 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
                 line += height.padStart(8) + margin;
             }
 
+            /// --- Test results ---
+
+            const num_to_string = (a: number) => {
+                if (a === 0) return "";
+                return a.toLocaleString();
+            };
+
+            const req_failed = test_reports.has(res.pubkey) ? num_to_string(test_reports.get(res.pubkey).req_failed) : "N/A";
+            const bc_failed = test_reports.has(res.pubkey) ? num_to_string(test_reports.get(res.pubkey).bc_test_failed) : "N/A";
+            const storage_failed = test_reports.has(res.pubkey) ? num_to_string(test_reports.get(res.pubkey).store_test_failed) : "N/A";
+            
+            line += req_failed.padStart(12) + margin;
+            line += bc_failed.padStart(10) + margin;
+            line += storage_failed.padStart(12) + margin;
+
+            /// ---- end ----
+
             line += status[res.pubkey].padStart(10) + margin;
             line += res.version.padStart(8);
 
@@ -174,44 +208,6 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
         console.log(`[${size}]: ${count}`);
     }
 
-}
-
-export const printDiff = (prev: Map<string, NodeStats>, cur: Map<string, NodeStats>) => {
-
-    const margin = "  ";
-    let header = '';
-    header += "PubKey".padStart(16) + margin;
-    header += "IP".padStart(16) + margin;
-    header += "Port".padStart(5) + margin;
-    header += "Uptime".padStart(12) + margin;
-    header += "Store".padStart(10) + margin;
-    header += "Retrieve".padStart(10) + margin;
-    console.log(header);
-    console.log("-".repeat(header.length))
-
-    prev.forEach(x => {
-        let line = '';
-        line += x.pubkey.substr(0, 16).padStart(16) + margin;
-        line += x.ip.padStart(16) + margin;
-        line += x.port.toString().padStart(5) + margin;
-
-        if (x.reset_time !== 0) {
-
-            const uptime = "";
-            const store_diff = cur.get(x.pubkey).total_store_requests - x.total_store_requests;
-            const store_diff_str = store_diff.toLocaleString();
-
-            const retrieve_diff = cur.get(x.pubkey).client_retrieve_requests - x.client_retrieve_requests;
-            const retrieve_diff_str = retrieve_diff.toLocaleString();
-
-            line += uptime.padStart(12) + margin;
-            line += store_diff_str.padStart(10) + margin;
-            line += retrieve_diff_str.padStart(10) + margin;
-
-        }
-
-        console.log(line);
-    });
 }
 
 export class NodeStats {

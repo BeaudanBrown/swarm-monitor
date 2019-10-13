@@ -14,6 +14,20 @@ const SEED_NODE_URL = 'http://lokiblocks.com:22023/json_rpc';
 // const SEED_NODE_URL = 'http://doopool.xyz:22020/json_rpc';
 const CONCURRENT_REQUESTS = 1000;
 
+function countTestFailures(tests: any) {
+
+  let count = 0;
+
+  tests.forEach((test : any) => {
+    if (test.result != "OK") {
+      count++;
+    }
+  });
+
+  return count;
+
+}
+
 export class Network {
   static instance: Network;
   allNodes: Snode[];
@@ -133,7 +147,13 @@ export class Network {
                                 res.connections_in, res.https_connections_out, res.http_connections_out);
       for (let peer in res.peers) {
         let val = res.peers[peer];
-        let peer_stats = new PeerStats(peer, val.pushes_failed, val.requests_failed);
+
+        const bc_failed = countTestFailures(val.blockchain_tests);
+        const storage_failed = countTestFailures(val.storage_tests);
+
+        const peer_hex = Snode.snodeAddressToHex(peer);
+
+        let peer_stats = new PeerStats(peer_hex, val.pushes_failed, val.requests_failed, bc_failed, storage_failed);
         stats.add_peer_stats(peer_stats);
       }
       return stats;

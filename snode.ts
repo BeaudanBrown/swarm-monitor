@@ -21,6 +21,7 @@ export class Snode {
   lastUptimeProof: number;
 
   constructor(pubkey: string, ip: string, port: string, swarm_id: string, last_uptime: number) {
+
     this.pubkey = pubkey;
     this.network = new Network();
     this.ip = ip;
@@ -38,6 +39,13 @@ export class Snode {
       .slice(1)
       .toString('utf8');
     return snodeAddress;
+  }
+
+  static snodeAddressToHex(sn_addr: string) {
+
+    const buf = multibase.decode(`${base32zCode}${sn_addr}`);
+    const hex_addr = multibase.encode(hexCode, buf).slice(1).toString('utf8');
+    return hex_addr;
   }
 
   async sendMessage(message: Message) {
