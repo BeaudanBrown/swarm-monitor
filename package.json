@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "async": "^3.1.0",
+    "async": "^3.2.2",
     "bytebuffer": "^5.0.1",
     "jsbi": "^2.0.5",
     "multibase": "^0.6.0",
